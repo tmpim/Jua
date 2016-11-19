@@ -63,10 +63,7 @@ end
 
 function run()
   juaRunning = true
-  while true do
-    if not juaRunning then
-      break
-    end
+  while juaRunning do
     tick()
   end
 end
