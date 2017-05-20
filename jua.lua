@@ -8,6 +8,7 @@ local function registerEvent(event, callback)
   if eventRegistry[event] == nil then
     eventRegistry[event] = {}
   end
+
   table.insert(eventRegistry[event], callback)
 end
 
@@ -18,6 +19,19 @@ local function registerTimed(time, repeating, callback)
     callback = callback,
     timer = os.startTimer(time)
   })
+end
+
+local function discoverEvents(event)
+    local evs = {}
+    for k,v in pairs(eventRegistry) do
+        if k == event or string.match(k, event) or event == "*" then
+            for i,v2 in ipairs(v) do
+                table.insert(evs, v2)
+            end
+        end
+    end
+
+    return evs
 end
 
 function on(event, callback)
@@ -38,8 +52,9 @@ local function tick()
 
   if eventRegistry[event] == nil then
     eventRegistry[event] = {}
-  elseif #eventRegistry[event] > 0 then
-    for i, v in ipairs(eventRegistry[event]) do
+  else
+    local evs = discoverEvents(event)
+    for i, v in ipairs(evs) do
       v(unpack(eargs))
     end
   end
@@ -51,7 +66,7 @@ local function tick()
       if v.timer == timer then
         v.callback()
 
-        if v.repeating then 
+        if v.repeating then
           v.timer = os.startTimer(v.time)
         else
           table.remove(timedRegistry, i)
@@ -71,3 +86,11 @@ end
 function stop()
   juaRunning = false
 end
+
+return {
+  on = on,
+  setInterval = setInterval,
+  setTimeout = setTimeout,
+  run = run,
+  stop = stop
+}

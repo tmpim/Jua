@@ -1,4 +1,10 @@
-os.loadAPI("jua")
+local jua
+
+if require then
+  jua = require("jua")
+else
+  os.loadAPI("jua")
+end
 
 local timePassed = 0
 
