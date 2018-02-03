@@ -77,6 +77,7 @@ function tick()
 end
 
 function run()
+  os.queueEvent("init")
   juaRunning = true
   while juaRunning do
     tick()
