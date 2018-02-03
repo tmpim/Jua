@@ -84,6 +84,11 @@ function run()
   end
 end
 
+function go(func)
+  on("init", func)
+  run()
+end
+
 function stop()
   juaRunning = false
 end
@@ -106,6 +111,7 @@ return {
   setTimeout = setTimeout,
   tick = tick,
   run = run,
+  go = go,
   stop = stop,
   await = await
 }
