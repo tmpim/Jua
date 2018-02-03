@@ -95,7 +95,7 @@ function await(func, ...)
     out = {...}
     finished = true
   end, unpack(args))
-  while not finished do jua.tick() end
+  while not finished do tick() end
   return unpack(out)
 end
 
