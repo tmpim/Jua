@@ -13,6 +13,10 @@ local function registerEvent(event, callback)
 end
 
 local function registerTimed(time, repeating, callback)
+  if repeating then
+    callback(true)
+  end
+
   table.insert(timedRegistry, {
     time = time,
     repeating = repeating,
@@ -64,7 +68,7 @@ function tick()
 
     for i, v in ipairs(timedRegistry) do
       if v.timer == timer then
-        v.callback()
+        v.callback(not v.repeating or nil)
 
         if v.repeating then
           v.timer = os.startTimer(v.time)
