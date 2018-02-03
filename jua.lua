@@ -46,7 +46,7 @@ function setTimeout(callback, time)
   registerTimed(time, false, callback)
 end
 
-local function tick()
+function tick()
   local eargs = {os.pullEventRaw()}
   local event = eargs[1]
 
@@ -87,10 +87,24 @@ function stop()
   juaRunning = false
 end
 
+function await(func, ...)
+  local args = {...}
+  local out
+  local finished
+  func(function(...)
+    out = {...}
+    finished = true
+  end, unpack(args))
+  while not finished do jua.tick() end
+  return unpack(out)
+end
+
 return {
   on = on,
   setInterval = setInterval,
   setTimeout = setTimeout,
+  tick = tick,
   run = run,
-  stop = stop
+  stop = stop,
+  await = await
 }
