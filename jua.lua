@@ -66,7 +66,8 @@ function tick()
   if event == "timer" then
     local timer = eargs[2]
 
-    for i, v in ipairs(timedRegistry) do
+    for i = #timedRegistry, 1, -1 do
+      local v = timedRegistry[i]
       if v.timer == timer then
         v.callback(not v.repeating or nil)
 
