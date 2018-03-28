@@ -1,122 +1,47 @@
-local juaVersion = "0.0"
+local jua = {}
 
-juaRunning = false
-eventRegistry = {}
-timedRegistry = {}
+local running = false
+local eventRegistry = {}
+local suspendedThreads = {}
 
-local function registerEvent(event, callback)
-  if eventRegistry[event] == nil then
+local function registerEvent(event, func)
+  if not eventRegistry[event] then
     eventRegistry[event] = {}
   end
 
-  table.insert(eventRegistry[event], callback)
+  eventRegistry[event][#eventRegistry + 1] = func
 end
 
-local function registerTimed(time, repeating, callback)
-  if repeating then
-    callback(true)
-  end
+local function mainThread()
+  while running do
+    local event = {coroutine.yield()}
+    local eventName = event[1]
 
-  table.insert(timedRegistry, {
-    time = time,
-    repeating = repeating,
-    callback = callback,
-    timer = os.startTimer(time)
-  })
-end
+    if eventRegistry[eventName] and #eventRegistry[eventName] > 0 then
+      for k, v in pairs(eventRegistry[eventName]) do
+        local co = coroutine.create(v)
 
-local function discoverEvents(event)
-    local evs = {}
-    for k,v in pairs(eventRegistry) do
-        if k == event or string.match(k, event) or event == "*" then
-            for i,v2 in ipairs(v) do
-                table.insert(evs, v2)
-            end
-        end
-    end
+        coroutine.resume(co, unpack(event))
 
-    return evs
-end
-
-function on(event, callback)
-  registerEvent(event, callback)
-end
-
-function setInterval(callback, time)
-  registerTimed(time, true, callback)
-end
-
-function setTimeout(callback, time)
-  registerTimed(time, false, callback)
-end
-
-function tick()
-  local eargs = {os.pullEventRaw()}
-  local event = eargs[1]
-
-  if eventRegistry[event] == nil then
-    eventRegistry[event] = {}
-  else
-    local evs = discoverEvents(event)
-    for i, v in ipairs(evs) do
-      v(unpack(eargs))
-    end
-  end
-
-  if event == "timer" then
-    local timer = eargs[2]
-
-    for i = #timedRegistry, 1, -1 do
-      local v = timedRegistry[i]
-      if v.timer == timer then
-        v.callback(not v.repeating or nil)
-
-        if v.repeating then
-          v.timer = os.startTimer(v.time)
-        else
-          table.remove(timedRegistry, i)
+        if coroutine.status(co) == "suspended" then
+          suspendedThreads[#suspendedThreads + 1] = co
         end
       end
     end
   end
 end
 
-function run()
-  os.queueEvent("init")
-  juaRunning = true
-  while juaRunning do
-    tick()
-  end
+jua.on = function(event, func)
+  registerEvent(event, func)
 end
 
-function go(func)
-  on("init", func)
-  run()
+jua.run = function()
+  running = true
+  mainThread()
 end
 
-function stop()
-  juaRunning = false
+jua.stop = function()
+  running = false
 end
 
-function await(func, ...)
-  local args = {...}
-  local out
-  local finished
-  func(function(...)
-    out = {...}
-    finished = true
-  end, unpack(args))
-  while not finished do tick() end
-  return unpack(out)
-end
-
-return {
-  on = on,
-  setInterval = setInterval,
-  setTimeout = setTimeout,
-  tick = tick,
-  run = run,
-  go = go,
-  stop = stop,
-  await = await
-}
+return jua

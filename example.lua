@@ -1,10 +1,4 @@
-local jua
-
-if require then
-  jua = require("jua")
-else
-  os.loadAPI("jua")
-end
+local jua = require("jua")
 
 local timePassed = 0
 
@@ -15,15 +9,15 @@ end)
 jua.on("mouse_click", function(event, button, x, y)
   print("Mouse clicked at X: "..x.." Y:"..y)
 end)
-
+--[[
 jua.setTimeout(function()
   print("The program ran for 5 seconds. Exiting...")
   jua.stop()
 end, 5)
-
-jua.setInterval(function()
+]]
+--[[jua.setInterval(function()
   timePassed = timePassed + 1
   print(timePassed.." seconds have passed.")
-end, 1)
+end, 1)]]
 
 jua.run()
