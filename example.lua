@@ -9,12 +9,12 @@ end)
 jua.on("mouse_click", function(event, button, x, y)
   print("Mouse clicked at X: "..x.." Y:"..y)
 end)
---[[
+
 jua.setTimeout(function()
   print("The program ran for 5 seconds. Exiting...")
   jua.stop()
 end, 5)
-]]
+
 --[[jua.setInterval(function()
   timePassed = timePassed + 1
   print(timePassed.." seconds have passed.")

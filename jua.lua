@@ -2,6 +2,8 @@ local jua = {}
 
 local running = false
 local eventRegistry = {}
+local timedRegistry = {}
+local intervalRegistry = {}
 local suspendedThreads = {}
 
 local function registerEvent(event, func)
@@ -10,6 +12,15 @@ local function registerEvent(event, func)
   end
 
   eventRegistry[event][#eventRegistry + 1] = func
+end
+
+local function registerTimeout(func, timeout)
+  local timer = os.startTimer(timeout)
+  timedRegistry[timer] = func
+end
+
+local function registerInterval(func, interval)
+  --TODO: interval registry
 end
 
 local function mainThread()
@@ -28,12 +39,20 @@ local function mainThread()
         end
       end
     end
+
+    if eventName == "timer" then
+      if timedRegistry[event[2]] then
+        timedRegistry[event[2]](unpack(event))
+      else
+        -- TODO: handle intervals
+      end
+    end
   end
 end
 
-jua.on = function(event, func)
-  registerEvent(event, func)
-end
+jua.on = registerEvent
+
+jua.setTimeout = registerTimeout
 
 jua.run = function()
   running = true
