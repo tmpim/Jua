@@ -3,6 +3,7 @@ local jua = {}
 local running = false
 local eventRegistry = {}
 local timedRegistry = {}
+local intervalLookup = {}
 local intervalRegistry = {}
 local suspendedThreads = {}
 
@@ -20,7 +21,14 @@ local function registerTimeout(func, timeout)
 end
 
 local function registerInterval(func, interval)
-  --TODO: interval registry
+  local index = #intervalRegistry + 1
+  intervalRegistry[index] = {
+    interval = interval,
+    func = func
+  }
+
+  local timer = os.startTimer(interval)
+  intervalLookup[timer] = index
 end
 
 local function mainThread()
@@ -42,9 +50,27 @@ local function mainThread()
 
     if eventName == "timer" then
       if timedRegistry[event[2]] then
-        timedRegistry[event[2]](unpack(event))
-      else
-        -- TODO: handle intervals
+        local co = coroutine.create(timedRegistry[event[2]])
+
+        coroutine.resume(co, unpack(event))
+
+        if coroutine.status(co) == "suspended" then
+          suspendedThreads[#suspendedThreads + 1] = co
+        end
+      elseif intervalLookup[event[2]] then
+        local index = intervalLookup[event[2]]
+
+        local co = coroutine.create(intervalRegistry[index].func)
+
+        coroutine.resume(co, unpack(event))
+        
+        if coroutine.status(co) == "suspended" then
+          suspendedThreads[#suspendedThreads + 1] = co
+        end
+
+        intervalLookup[event[2]] = nil
+        local timer = os.startTimer(intervalRegistry[index].interval)
+        intervalLookup[timer] = index
       end
     end
   end
@@ -53,6 +79,8 @@ end
 jua.on = registerEvent
 
 jua.setTimeout = registerTimeout
+
+jua.setInterval = registerInterval
 
 jua.run = function()
   running = true

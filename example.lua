@@ -7,7 +7,7 @@ jua.on("terminate", function()
 end)
 
 jua.on("mouse_click", function(event, button, x, y)
-  print("Mouse clicked at X: "..x.." Y:"..y)
+  print("Mouse clicked at X: "..x.." Y: "..y)
 end)
 
 jua.setTimeout(function()
@@ -15,9 +15,9 @@ jua.setTimeout(function()
   jua.stop()
 end, 5)
 
---[[jua.setInterval(function()
+jua.setInterval(function()
   timePassed = timePassed + 1
   print(timePassed.." seconds have passed.")
-end, 1)]]
+end, 1)
 
 jua.run()
