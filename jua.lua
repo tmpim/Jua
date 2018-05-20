@@ -12,6 +12,29 @@ local function registerEvent(event, callback)
   table.insert(eventRegistry[event], callback)
 end
 
+local function unregisterEvent(event, callback)
+  if eventRegistry[event] == nil then
+    return false
+  end
+
+  if not callback then
+    -- Clear all callbacks
+    eventRegistry[event] = {}
+    return true
+  end
+
+  local callbackList = eventRegistry[event]
+
+  for i = 1, #callbackList do
+    if callbackList[i] == callback then
+      table.remove(callbackList, i)
+      return true
+    end
+  end
+
+  return false
+end
+
 local function registerTimed(time, repeating, callback)
   if repeating then
     callback(true)
@@ -23,6 +46,25 @@ local function registerTimed(time, repeating, callback)
     callback = callback,
     timer = os.startTimer(time)
   })
+end
+
+local function unregisterTimed(callback)
+  local callbackList = timedRegistry
+
+  if not callback then
+    -- Clear all timed callbacks
+    timedRegistry = {}
+    return true
+  end
+
+  for i = 1, #callbackList do
+    if callbackList[i] == callback then
+      table.remove(callbackList, i)
+      return true
+    end
+  end
+
+  return false
 end
 
 local function discoverEvents(event)
@@ -42,6 +84,21 @@ function on(event, callback)
   registerEvent(event, callback)
 end
 
+function off(event, callback)
+  unregisterEvent(event, callback)
+end
+
+function once(event, callback)
+  local callbackWrapper
+  
+  callbackWrapper = function(...)
+    callback(...)
+    unregisterEvent(event, callbackWrapper)
+  end
+
+  registerEvent(event, callbackWrapper)
+end
+
 function setInterval(callback, time)
   registerTimed(time, true, callback)
 end
@@ -49,6 +106,12 @@ end
 function setTimeout(callback, time)
   registerTimed(time, false, callback)
 end
+
+function clearInterval(callback)
+  unregisterTimed(callback)
+end
+
+clearTimeout = clearInterval
 
 function tick()
   local eargs = {os.pullEventRaw()}
@@ -111,8 +174,12 @@ end
 
 return {
   on = on,
+  off = off,
+  once = once,
   setInterval = setInterval,
   setTimeout = setTimeout,
+  clearInterval = clearInterval,
+  clearTimeout = clearTimeout,
   tick = tick,
   run = run,
   go = go,
