@@ -1,5 +1,8 @@
+## NOTE
+Jua is undergoing changes and being rewritten in the `rewrite` branch to utilize coroutines and work more efficiently.
+
 # Jua
-A javascript inspired callback system for ComputerCraft Lua events.
+A javascript inspired callback (eco)system for the ComputerCraft event loop.
 
 
 ## Related Projects
