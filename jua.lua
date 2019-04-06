@@ -1,11 +1,11 @@
 local jua = {}
 
--- local state for whether the jua event loop is running
+-- Local state for whether the jua event loop is running
 local running = false
--- local thread group
+-- Local thread group
 local threads = {}
 
--- counts elements in a table
+-- Counts elements in a table
 local function count(object)
   local i = 0
   for k, v in pairs(object) do
@@ -14,18 +14,18 @@ local function count(object)
   return i
 end
 
--- checks for a table containing an object as a key or value
+-- Checks for a table containing an object as a key or value
 local function contains(value, object)
   for k, v in pairs(object) do
     if v == value or k == value then
-      return true
+      return k
     end
   end
 
   return false
 end
 
--- finds the lowest free pid
+-- Finds the lowest free pid
 local function newPid()
   for i = 1, math.huge do
     if not threads[i] then
@@ -36,7 +36,12 @@ local function newPid()
   end
 end
 
--- returns status of a given pid (suspended, running, dead, free)
+-- Returns pid of given coroutine
+local function getPid(thread)
+  return contains(thread, threads)
+end
+
+-- Returns status of a given pid (suspended, running, dead, free)
 local function threadStatus(pid)
   if threads[pid] then
     return coroutine.status(threads[pid])
@@ -45,12 +50,12 @@ local function threadStatus(pid)
   end
 end
 
--- removes a thread from the local thread group
+-- Removes a thread from the local thread group
 local function removeThread(pid)
   threads[pid] = nil
 end
 
--- runs/"resumes" a thread by pid immediately with optional args
+-- Runs/"resumes" a thread by pid immediately with optional args
 local function resumeThread(pid, ...)
   local success, kill = coroutine.resume(threads[pid], ...)
   if success and kill then
@@ -62,7 +67,7 @@ local function resumeThread(pid, ...)
   return kill
 end
 
--- spawns a thread and runs it immediately with optional args
+-- Spawns a thread and runs it immediately with optional args
 local function newThread(func, ...)
   local thread = coroutine.create(func)
   local pid = newPid()
@@ -71,7 +76,7 @@ local function newThread(func, ...)
   return pid, kill
 end
 
--- spawns a forking event loop based thread (note, it follows a KILL from child processes if told to do so)
+-- Spawns a forking event loop based thread (note, it follows a KILL from child processes if told to do so)
 local function newEventThread(func)
   newThread(function()
     while true do
@@ -87,12 +92,12 @@ local function newEventThread(func)
   end)
 end
 
--- kills the thread which this function is called from (marked dead)
+-- Kills the thread which this function is called from (marked dead)
 local function killRunningThread()
   coroutine.yield(true)
 end
 
--- internal thread managing event loop
+-- Internal thread managing event loop
 local function eventLoop()
   while running do
     local event = {coroutine.yield()}
@@ -111,7 +116,7 @@ local function eventLoop()
   end
 end
 
--- spawns a forking event thread with an event filter (function predicate, table of strings, string)
+-- Spawns a forking event thread with an event filter (function predicate, table of strings, string)
 jua.on = function(onEvent, func)
   newEventThread(function(...)
     local eargs = {...}
@@ -126,7 +131,15 @@ jua.on = function(onEvent, func)
   end)
 end
 
--- spawns a recurring timer thread
+-- Spawns a forking event thread that kills itself after a single event
+jua.once = function(onEvent, func)
+  jua.on(onEvent, function(...)
+    func(...)
+    killRunningThread()
+  end)
+end
+
+-- Spawns a recurring timer thread
 jua.onInterval = function(interval, func)
   local timer = os.startTimer(interval)
 
@@ -138,12 +151,12 @@ jua.onInterval = function(interval, func)
   end)
 end
 
--- alternative to onInterval with reversed args
+-- Alternative to onInterval with reversed args
 jua.setInterval = function(func, interval)
   return jua.onInterval(interval, func)
 end
 
--- spawns a one-time timer thread
+-- Spawns a one-time timer thread
 jua.onTimeout = function(timeout, func)
   local timer = os.startTimer(timeout)
 
@@ -155,31 +168,140 @@ jua.onTimeout = function(timeout, func)
   end)
 end
 
--- alternative to onTimeout with reversed args
+-- Alternative to onTimeout with reversed args
 jua.setTimeout = function(func, timeout)
   return jua.onTimeout(timeout, func)
 end
 
--- queues a jua_init event, sets running to true and runs the event loop
+-- Returns a promise with the given executor
+jua.promise = function(executor)
+  local promise = {}
+
+  promise.status = "pending"
+  promise.done_callback = {}
+  promise.fail_callback = {}
+  promise.finally_callback = {}
+
+  -- Registers callback for after promise has resolved
+  promise.done = function(onFulfilled, onRejected)
+    if promise.status == "fulfilled" and onFulfilled then
+      newThread(onFulfilled, unpack(promise.results))
+    elseif promise.status == "rejected" and onRejected then
+      newThread(onRejected, unpack(promise.results))
+    else
+      if onFulfilled then
+        table.insert(promise.done_callback, onFulfilled)
+      end
+  
+      if onRejected then
+        table.insert(promise.fail_callback, onRejected)
+      end
+    end
+
+    return promise
+  end
+
+  -- Alternative to promise.done
+  promise["then"] = promise.done
+
+  -- Registers callback for after promise has rejected
+  promise.fail = function(onRejected)
+    promise.done(nil, onRejected)
+
+    return promise
+  end
+
+  -- Alternative to promise.fail
+  promise.catch = promise.fail
+
+  -- Registers callback for after promise has resolved or rejected
+  promise.finally = function(onFinally)
+    if promise.status ~= "pending" and onFinally then
+      newThread(onFinally)
+    elseif onFinally then
+      table.insert(promise.finally_callback, onFinally)
+    end
+
+    return promise
+  end
+
+  -- Helper function for resolve/reject
+  promise.finish = function(success, ...)
+    if promise.status ~= "pending" then
+      error("Promise already resolved")
+    end
+
+    promise.success = success
+    promise.results = {...}
+
+    if success then
+      promise.status = "fulfilled"
+
+      if #promise.done_callback > 0 then
+        for _, callback in pairs(promise.done_callback) do
+          newThread(callback, unpack(promise.results))
+        end
+      end
+    else
+      promise.status = "rejected"
+
+      if #promise.fail_callback > 0 then
+        for _, callback in pairs(promise.fail_callback) do
+          newThread(callback, unpack(promise.results))
+        end
+      end
+    end
+
+    if #promise.finally_callback > 0 then
+      for _, callback in pairs(promise.finally_callback) do
+        newThread(callback)
+      end
+    end
+
+    return promise
+  end
+  
+  -- Resolves the promise
+  promise.resolve = function(...)
+    promise.finish(true, ...)
+
+    return promise
+  end
+
+  -- Rejects the promise
+  promise.reject = function(...)
+    promise.finish(false, ...)
+
+    return promise
+  end
+
+  newThread(executor, promise.resolve, promise.reject)
+
+  return promise
+end
+
+
+-- Queues a jua_init event, sets running to true and runs the event loop
 jua.run = function()
   os.queueEvent("jua_init")
   running = true
   eventLoop()
 end
 
--- sets running to false, stopping the event loop ASAP
+-- Sets running to false, stopping the event loop ASAP
 jua.stop = function()
   running = false
 end
 
 -- jua.run with a callback on jua_init
 jua.go = function(func)
-  jua.on("jua_init", function()
-    func()
-    killRunningThread()
-  end)
+  if func then
+    jua.once("jua_init", function()
+      func()
+    end)
+  end
   jua.run()
 end
 
--- export jua
+-- Export jua
 return jua
