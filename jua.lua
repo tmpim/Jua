@@ -176,11 +176,16 @@ end
 -- Returns a promise with the given executor
 jua.promise = function(executor)
   local promise = {}
-
+  
+  promise.id = tostring(promise):sub(8)
   promise.status = "pending"
   promise.done_callback = {}
   promise.fail_callback = {}
   promise.finally_callback = {}
+
+  setmetatable(promise, {
+    __tostring = function() return "promise: " .. promise.id end
+  })
 
   -- Registers callback for after promise has resolved
   promise.done = function(onFulfilled, onRejected)
