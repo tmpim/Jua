@@ -285,6 +285,19 @@ jua.promise = function(executor)
   return promise
 end
 
+-- Returns a promise which resolves or rejects based on optional shouldReject after timeout and supplies optional parameters
+jua.sleep = function(timeout, shouldReject, ...)
+  local args = {...}
+  return jua.promise(function(resolve, reject)
+    jua.onTimeout(timeout, function()
+      if not shouldReject then
+        resolve(unpack(args))
+      else
+        reject(unpack(args))
+      end
+    end)
+  end)
+end
 
 -- Queues a jua_init event, sets running to true and runs the event loop
 jua.run = function()

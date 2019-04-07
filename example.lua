@@ -38,12 +38,8 @@ jua.promise(function(resolve, reject)
 end)
   .done(function(s) print(s) end)
 
--- Create a promise that rejects after 2 seconds
-jua.promise(function(resolve, reject)
-  jua.onTimeout(2, function()
-    reject("Promise rejected after 2 seconds!")
-  end)
-end)
+-- Create a sleeping promise that rejects after 2 seconds
+jua.sleep(2, true, "Promise rejected after 2 seconds!")
   .fail(function(s) print(s) end)
 
 -- Start jua with a callback (jua.run without callback)
