@@ -1,6 +1,8 @@
 ## NOTE
 Jua is undergoing changes and being rewritten in the `rewrite` branch to utilize coroutines and work more efficiently.
 
+### NOTE NOTE: While the rewrite branch is still a WIP, it's development has been suspended indefinitely due to to there being no real demand for CC: Lua APIs anymore. So long, and thanks for all the fish!
+
 # Jua
 A javascript inspired asynchronous (eco)system for the ComputerCraft event loop.
 
