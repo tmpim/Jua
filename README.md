@@ -1,7 +1,6 @@
-## NOTE
-Jua is undergoing changes and being rewritten in the `rewrite` branch to utilize coroutines and work more efficiently.
+# DEPRECATED
 
-### NOTE NOTE: While the rewrite branch is still a WIP, it's development has been suspended indefinitely due to to there being no real demand for CC: Lua APIs anymore. So long, and thanks for all the fish!
+Jua is now deprecated and this repository will be archived, for a newer (and superior) alternative, check out [hatsune](https://github.com/tmpim/hatsune).
 
 # Jua
 A javascript inspired asynchronous (eco)system for the ComputerCraft event loop.
